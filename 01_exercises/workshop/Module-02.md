@@ -1428,20 +1428,35 @@ Since we added new tools to the MCP server, we need to restart it to load the ch
 **In Terminal 1 (MCP Server):**
 
 1. Stop the currently running MCP server (press **Ctrl+C** in the terminal)
-2. Restart it with the commands below:
+2. Ensure your virtual environment is activated
+3. Restart the MCP server
 
-```powershell
+**macOS/Linux:**
+```bash
+# Ensure you're in the exercises directory
+cd ~/travel-multi-agent-workshop/01_exercises
+
+# Activate virtual environment (if not already active)
+source .venv-travel/bin/activate
+
+# Navigate to mcp_server and restart
 cd mcp_server
-$env:PYTHONPATH="..\python"; python mcp_http_server.py
+export PYTHONPATH="../python"
+python mcp_http_server.py
 ```
 
-**Important**: Always ensure your virtual environment is activated before starting the server!
-
-You must be in **multi-agent-workshop\01_exercises** folder and then use the below commands to activate the virtual environment. And after activating the environment, follow the above commands to re-start the mcp server.  
-
+**Windows (PowerShell):**
 ```powershell
-cd multi-agent-workshop\01_exercises
-.\venv\Scripts\Activate.ps1
+# Ensure you're in the exercises directory
+cd ~\travel-multi-agent-workshop\01_exercises
+
+# Activate virtual environment (if not already active)
+.\.venv-travel\Scripts\Activate.ps1
+
+# Navigate to mcp_server and restart
+cd mcp_server
+$env:PYTHONPATH="..\python"
+python mcp_http_server.py
 ```
 
 **Backend API (Terminal 2)** - No action needed. Watchfiles will auto-reload changes.
@@ -1518,7 +1533,23 @@ Check that all components are working:
 
 - Check Cosmos DB connection in **.env**
 - Verify container names: **places**, **sessions**, **trips**
-- Ensure seed data loaded: **python python/data/seed_data.py**
+- Ensure seed data is loaded:
+
+**macOS/Linux:**
+```bash
+cd ~/travel-multi-agent-workshop/01_exercises
+source .venv-travel/bin/activate
+cd python
+python data/seed_data.py
+```
+
+**Windows (PowerShell):**
+```powershell
+cd ~\travel-multi-agent-workshop\01_exercises
+.\.venv-travel\Scripts\Activate.ps1
+cd python
+python data\seed_data.py
+```
 
 **Issue: Agent doesn't route correctly**
 
