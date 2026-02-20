@@ -77,6 +77,7 @@ PYTHONPATH=../python python mcp_http_server.py
 ```
 
 **Windows (PowerShell):**
+```bash
 .\venv\Scripts\Activate.ps1
 cd mcp_server
 $env:PYTHONPATH="..\python"; python mcp_http_server.py
