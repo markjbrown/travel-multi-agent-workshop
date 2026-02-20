@@ -40,7 +40,7 @@ To deploy the complete travel multi-agent assistant to your Azure account, follo
 1. **Clone the Repository**: Start by cloning this repository to your local machine.
     ```bash
     git clone https://github.com/AzureCosmosDB/travel-multi-agent-workshop.git
-    cd travel-multi-agent-workshop
+    cd 02_completed
     ``` 
 
 2. **Install Prerequisites**: Ensure you have the following installed:
