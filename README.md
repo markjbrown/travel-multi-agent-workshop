@@ -80,7 +80,8 @@ PYTHONPATH=../python python mcp_http_server.py
 ```bash
 .\venv\Scripts\Activate.ps1
 cd mcp_server
-$env:PYTHONPATH="..\python"; python mcp_http_server.py
+$env:PYTHONPATH="..\python"
+python mcp_http_server.py
 ```
 
 **Windows (Command Prompt):**
