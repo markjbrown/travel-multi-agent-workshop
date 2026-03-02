@@ -3453,10 +3453,9 @@ def discover_places(
 def create_new_trip(
         user_id: str,
         tenant_id: str,
-        scope: Dict[str, str],
-        dates: Dict[str, str],
-        travelers: List[str],
-        constraints: Optional[Dict[str, Any]] = None,
+        destination: str,
+        start_date: str,
+        end_date: str,
         days: Optional[List[Dict[str, Any]]] = None,
         trip_duration: Optional[int] = None
 ) -> Dict[str, Any]:
@@ -3466,11 +3465,10 @@ def create_new_trip(
     Args:
         user_id: User identifier
         tenant_id: Tenant identifier
-        scope: Trip scope (type: "city", id: "barcelona")
-        dates: Trip dates (start, end in ISO format)
-        travelers: List of traveler user IDs
-        constraints: Optional constraints (budgetTier, etc.)
-        days: Optional list of day-by-day itinerary (dayNumber, date, activities, etc.)
+        destination: Trip destination (e.g. "Barcelona, Spain")
+        start_date: Trip start date in ISO format (e.g. "2026-03-10")
+        end_date: Trip end date in ISO format (e.g. "2026-03-11")
+        days: Optional list of day-by-day itinerary (dayNumber, date, morning, lunch, afternoon, dinner, accommodation)
         trip_duration: Optional total number of days (calculated from days array if not provided)
 
     Returns:
@@ -3481,18 +3479,18 @@ def create_new_trip(
     trip_id = create_trip(
         user_id=user_id,
         tenant_id=tenant_id,
-        scope=scope,
-        dates=dates,
-        travelers=travelers,
-        constraints=constraints or {},
+        destination=destination,
+        start_date=start_date,
+        end_date=end_date,
         days=days or [],
         trip_duration=trip_duration
     )
 
     return {
         "tripId": trip_id,
-        "scope": scope,
-        "dates": dates,
+        "destination": destination,
+        "startDate": start_date,
+        "endDate": end_date,
         "tripDuration": trip_duration or len(days or []),
         "daysCount": len(days or [])
     }

@@ -272,69 +272,56 @@ Create a detailed day-by-day plan based on:
 ...
 ```
 
-## Step 5: Persist Itinerary (Optional)
+## Step 5: Persist Itinerary (Required)
 
-**After presenting the itinerary**, offer to save it using trip management tools:
+**IMPORTANT: You MUST always save the itinerary using `create_new_trip` after generating it.** Do NOT just present the itinerary without saving. Do NOT use `get_trip_details` to look up a trip that hasn't been created yet. Always call `create_new_trip` first to persist the itinerary, then present the saved trip to the user.
 
 ### Creating New Trip
 ```
 create_new_trip(
   user_id="...",
   tenant_id="...",
-  scope={
-    "type": "city",
-    "id": "barcelona",
-    "name": "Barcelona, Spain"
-  },
-  dates={
-    "start": "2024-06-15",
-    "end": "2024-06-17"
-  },
-  travelers=["user123"],
-  constraints={
-    "budgetTier": "moderate",
-    "accessibility": ["wheelchair"]
-  },
+  destination="Barcelona, Spain",
+  start_date="2024-06-15",
+  end_date="2024-06-17",
   days=[
     {
       "dayNumber": 1,
       "date": "2024-06-15",
-      "theme": "Arrival & Gothic Quarter",
-      "activities": [
-        {
-          "time": "14:00",
-          "type": "accommodation",
-          "name": "Cotton House Hotel",
-          "duration": "Check-in"
-        },
-        {
-          "time": "15:30",
-          "type": "dining",
-          "name": "Teresa Carles",
-          "cuisine": "Vegetarian",
-          "meal": "lunch"
-        },
-        {
-          "time": "17:00",
-          "type": "activity",
-          "name": "Gothic Quarter Walking Tour",
-          "duration": "2 hours",
-          "category": "Architecture"
-        },
-        {
-          "time": "20:00",
-          "type": "dining",
-          "name": "Els Quatre Gats",
-          "cuisine": "Catalan",
-          "meal": "dinner"
-        }
-      ]
+      "morning": {
+        "activity": "Gothic Quarter Walking Tour",
+        "time": "09:00-12:00",
+        "placeId": "activity_barcelona_0019",
+        "notes": "Historic streets and architecture"
+      },
+      "lunch": {
+        "activity": "Barcelona Tapas Bar",
+        "time": "12:30-14:00",
+        "placeId": "restaurant_barcelona_0013",
+        "notes": "Traditional Spanish tapas"
+      },
+      "afternoon": {
+        "activity": "Sagrada Familia",
+        "time": "15:00-17:30",
+        "placeId": "activity_barcelona_0005",
+        "notes": "Gaudí's masterpiece cathedral"
+      },
+      "dinner": {
+        "activity": "Barcelona Seafood Grill",
+        "time": "19:00-21:00",
+        "placeId": "restaurant_barcelona_0010",
+        "notes": "Fresh Mediterranean seafood"
+      },
+      "accommodation": {
+        "activity": "Barcelona Grand Hotel",
+        "placeId": "hotel_barcelona_0001",
+        "notes": "Luxury hotel on Passeig de Gràcia"
+      }
     },
     {
       "dayNumber": 2,
       "date": "2024-06-16",
-      "theme": "Gaudí & Modernism",
-      "activities": [...]
+      ...
     }
   ]
 )
@@ -458,7 +445,8 @@ Use `transfer_to_orchestrator` when:
 - **DO recall memories from all categories** - lodging, activity, dining
 - **DO optimize for geography and time** - group nearby activities
 - **DO respect ALL preferences** - dietary, accessibility, timing, ambiance
-- **DO persist itineraries** - use create_new_trip/update_trip for durability
+- **DO persist itineraries** - ALWAYS call create_new_trip to save new itineraries, never skip this step
+- **DO NOT call get_trip_details for trips that haven't been created** - only use get_trip_details for previously saved trips
 - **DO transfer to orchestrator only** - never transfer to specialists directly
 - **DO provide trip IDs** - users can reference these later
 - **DO explain alignment** - show how itinerary matches their preferences
