@@ -1185,10 +1185,9 @@ def query_places_filtered(
 def create_trip(
     user_id: str,
     tenant_id: str,
-    scope: Dict[str, str],
-    dates: Dict[str, str],
-    travelers: List[str],
-    constraints: Dict[str, Any],
+    destination: str,
+    start_date: str,
+    end_date: str,
     days: Optional[List[Dict[str, Any]]] = None,
     trip_duration: Optional[int] = None
 ) -> str:
@@ -1196,7 +1195,9 @@ def create_trip(
     if not trips_container:
         raise Exception("Cosmos DB not available")
     
-    trip_id = f"trip_{datetime.utcnow().strftime('%Y')}_{scope['id'][:3]}"
+    # Generate a short destination slug for the trip ID
+    dest_slug = destination.lower().split(",")[0].strip().replace(" ", "_")[:15]
+    trip_id = f"trip_{user_id}_{dest_slug}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
     
     # Calculate trip duration from days array if not provided
     if trip_duration is None and days:
@@ -1207,13 +1208,13 @@ def create_trip(
         "tripId": trip_id,
         "userId": user_id,
         "tenantId": tenant_id,
-        "scope": scope,
-        "dates": dates,
-        "travelers": travelers,
-        "constraints": constraints,
+        "destination": destination,
+        "startDate": start_date,
+        "endDate": end_date,
         "tripDuration": trip_duration,
         "days": days or [],
-        "status": "planning"
+        "status": "planning",
+        "createdAt": datetime.utcnow().isoformat() + "Z"
     }
     
     trips_container.upsert_item(trip)

@@ -62,7 +62,7 @@ from src.app.services.azure_cosmos_db import (
     memories_container, places_container, debug_logs_container, get_checkpoint_saver,
     create_session_record, get_session_by_id,
     append_message, get_session_messages, query_places_hybrid,
-    get_trip, query_memories, query_places_with_theme, query_places_filtered,
+    get_trip, query_memories, get_all_user_memories, query_places_with_theme, query_places_filtered,
     patch_active_agent, update_session_activity,
     create_user, get_all_users, get_user_by_id,
     store_debug_log, get_debug_log, query_debug_logs
@@ -124,12 +124,13 @@ class Trip(BaseModel):
     tripId: str
     userId: str
     tenantId: str
-    scope: Dict[str, str]  # {"type": "city", "id": "rome"}
-    dates: Dict[str, str]  # {"start": "2024-06-01", "end": "2024-06-04"}
-    travelers: List[str]
-    constraints: Dict[str, Any]  # {"budgetTier": 2}
+    destination: str  # "Paris, France"
+    startDate: str  # "2025-11-15"
+    endDate: str  # "2025-11-19"
+    tripDuration: Optional[int] = None
     days: List[Dict] = []  # Day-by-day itinerary
     status: str = TripStatus.PLANNING
+    createdAt: Optional[str] = None
 
 
 class MemoryType(str, Enum):
@@ -1112,7 +1113,7 @@ def get_user_trips(tenantId: str, userId: str):
                 FROM c
                 WHERE c.tenantId = @tenantId
                   AND c.userId = @userId
-                ORDER BY c.dates.start DESC \
+                ORDER BY c.startDate DESC \
                 """
 
         items = list(trips_container.query_items(
@@ -1270,12 +1271,9 @@ def get_user_memories(
         List of Memory objects
     """
     try:
-        memory_types = [memoryType] if memoryType else None
-        memories = query_memories(
+        memories = get_all_user_memories(
             user_id=userId,
-            tenant_id=tenantId,
-            memory_types=memory_types,
-            min_salience=minSalience
+            tenant_id=tenantId
         )
 
         return [Memory(**mem) for mem in memories]

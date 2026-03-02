@@ -647,10 +647,9 @@ Below the hybrid search tool, add the following tools:
 def create_new_trip(
         user_id: str,
         tenant_id: str,
-        scope: Dict[str, str],
-        dates: Dict[str, str],
-        travelers: List[str],
-        constraints: Optional[Dict[str, Any]] = None,
+        destination: str,
+        start_date: str,
+        end_date: str,
         days: Optional[List[Dict[str, Any]]] = None,
         trip_duration: Optional[int] = None
 ) -> Dict[str, Any]:
@@ -660,11 +659,10 @@ def create_new_trip(
     Args:
         user_id: User identifier
         tenant_id: Tenant identifier
-        scope: Trip scope (type: "city", id: "barcelona")
-        dates: Trip dates (start, end in ISO format)
-        travelers: List of traveler user IDs
-        constraints: Optional constraints (budgetTier, etc.)
-        days: Optional list of day-by-day itinerary (dayNumber, date, activities, etc.)
+        destination: Trip destination (e.g. "Barcelona, Spain")
+        start_date: Trip start date in ISO format (e.g. "2026-03-10")
+        end_date: Trip end date in ISO format (e.g. "2026-03-11")
+        days: Optional list of day-by-day itinerary (dayNumber, date, morning, lunch, afternoon, dinner, accommodation)
         trip_duration: Optional total number of days (calculated from days array if not provided)
 
     Returns:
@@ -675,18 +673,18 @@ def create_new_trip(
     trip_id = create_trip(
         user_id=user_id,
         tenant_id=tenant_id,
-        scope=scope,
-        dates=dates,
-        travelers=travelers,
-        constraints=constraints or {},
+        destination=destination,
+        start_date=start_date,
+        end_date=end_date,
         days=days or [],
         trip_duration=trip_duration
     )
 
     return {
         "tripId": trip_id,
-        "scope": scope,
-        "dates": dates,
+        "destination": destination,
+        "startDate": start_date,
+        "endDate": end_date,
         "tripDuration": trip_duration or len(days or []),
         "daysCount": len(days or [])
     }
@@ -1034,23 +1032,42 @@ When creating an itinerary, use `create_new_trip` with:
 {
   "user_id": "{extracted from context}",
   "tenant_id": "{extracted from context}",
-  "scope": {"type": "city", "id": "barcelona"},
-  "dates": {"start": "2025-06-01", "end": "2025-06-03"},
-  "travelers": ["{user_id}"],
+  "destination": "Barcelona, Spain",
+  "start_date": "2025-06-01",
+  "end_date": "2025-06-03",
   "days": [
     {
       "dayNumber": 1,
       "date": "2025-06-01",
-      "activities": [
-        {
-          "time": "09:00",
-          "duration": "3 hours",
-          "category": "attraction",
-          "name": "Sagrada Familia",
-          "description": "Visit Gaudi's masterpiece",
-          "notes": "Book tickets online in advance"
-        }
-      ]
+      "morning": {
+        "activity": "Sagrada Familia",
+        "time": "09:00-12:00",
+        "placeId": "activity_barcelona_0005",
+        "notes": "Book tickets online in advance"
+      },
+      "lunch": {
+        "activity": "Barcelona Tapas Bar",
+        "time": "12:30-14:00",
+        "placeId": "restaurant_barcelona_0013",
+        "notes": "Traditional Spanish tapas"
+      },
+      "afternoon": {
+        "activity": "Park Güell",
+        "time": "15:00-17:30",
+        "placeId": "activity_barcelona_0009",
+        "notes": "Gaudí's colorful park with city views"
+      },
+      "dinner": {
+        "activity": "Barcelona Seafood Grill",
+        "time": "19:00-21:00",
+        "placeId": "restaurant_barcelona_0010",
+        "notes": "Fresh Mediterranean seafood"
+      },
+      "accommodation": {
+        "activity": "Barcelona Grand Hotel",
+        "placeId": "hotel_barcelona_0001",
+        "notes": "Luxury hotel on Passeig de Gràcia"
+      }
     }
   ],
   "trip_duration": 3
@@ -2437,10 +2454,9 @@ def discover_places(
 def create_new_trip(
         user_id: str,
         tenant_id: str,
-        scope: Dict[str, str],
-        dates: Dict[str, str],
-        travelers: List[str],
-        constraints: Optional[Dict[str, Any]] = None,
+        destination: str,
+        start_date: str,
+        end_date: str,
         days: Optional[List[Dict[str, Any]]] = None,
         trip_duration: Optional[int] = None
 ) -> Dict[str, Any]:
@@ -2450,11 +2466,10 @@ def create_new_trip(
     Args:
         user_id: User identifier
         tenant_id: Tenant identifier
-        scope: Trip scope (type: "city", id: "barcelona")
-        dates: Trip dates (start, end in ISO format)
-        travelers: List of traveler user IDs
-        constraints: Optional constraints (budgetTier, etc.)
-        days: Optional list of day-by-day itinerary (dayNumber, date, activities, etc.)
+        destination: Trip destination (e.g. "Barcelona, Spain")
+        start_date: Trip start date in ISO format (e.g. "2026-03-10")
+        end_date: Trip end date in ISO format (e.g. "2026-03-11")
+        days: Optional list of day-by-day itinerary (dayNumber, date, morning, lunch, afternoon, dinner, accommodation)
         trip_duration: Optional total number of days (calculated from days array if not provided)
 
     Returns:
@@ -2465,18 +2480,18 @@ def create_new_trip(
     trip_id = create_trip(
         user_id=user_id,
         tenant_id=tenant_id,
-        scope=scope,
-        dates=dates,
-        travelers=travelers,
-        constraints=constraints or {},
+        destination=destination,
+        start_date=start_date,
+        end_date=end_date,
         days=days or [],
         trip_duration=trip_duration
     )
 
     return {
         "tripId": trip_id,
-        "scope": scope,
-        "dates": dates,
+        "destination": destination,
+        "startDate": start_date,
+        "endDate": end_date,
         "tripDuration": trip_duration or len(days or []),
         "daysCount": len(days or [])
     }
@@ -2789,23 +2804,42 @@ When creating an itinerary, use `create_new_trip` with:
 {
   "user_id": "{extracted from context}",
   "tenant_id": "{extracted from context}",
-  "scope": {"type": "city", "id": "barcelona"},
-  "dates": {"start": "2025-06-01", "end": "2025-06-03"},
-  "travelers": ["{user_id}"],
+  "destination": "Barcelona, Spain",
+  "start_date": "2025-06-01",
+  "end_date": "2025-06-03",
   "days": [
     {
       "dayNumber": 1,
       "date": "2025-06-01",
-      "activities": [
-        {
-          "time": "09:00",
-          "duration": "3 hours",
-          "category": "attraction",
-          "name": "Sagrada Familia",
-          "description": "Visit Gaudi's masterpiece",
-          "notes": "Book tickets online in advance"
-        }
-      ]
+      "morning": {
+        "activity": "Sagrada Familia",
+        "time": "09:00-12:00",
+        "placeId": "activity_barcelona_0005",
+        "notes": "Book tickets online in advance"
+      },
+      "lunch": {
+        "activity": "Barcelona Tapas Bar",
+        "time": "12:30-14:00",
+        "placeId": "restaurant_barcelona_0013",
+        "notes": "Traditional Spanish tapas"
+      },
+      "afternoon": {
+        "activity": "Park Güell",
+        "time": "15:00-17:30",
+        "placeId": "activity_barcelona_0009",
+        "notes": "Gaudí's colorful park with city views"
+      },
+      "dinner": {
+        "activity": "Barcelona Seafood Grill",
+        "time": "19:00-21:00",
+        "placeId": "restaurant_barcelona_0010",
+        "notes": "Fresh Mediterranean seafood"
+      },
+      "accommodation": {
+        "activity": "Barcelona Grand Hotel",
+        "placeId": "hotel_barcelona_0001",
+        "notes": "Luxury hotel on Passeig de Gràcia"
+      }
     }
   ],
   "trip_duration": 3
