@@ -2,7 +2,7 @@
 -- Travel Multi-Agent Analytics — SQL Endpoint Queries
 -- =============================================================================
 -- Run these against the Fabric SQL Analytics Endpoint for your mirrored
--- Cosmos DB database (CosmosTravelAssistant) or against the Lakehouse gold tables.
+-- Cosmos DB database (TravelAssistantDatabase) or against the Lakehouse gold tables.
 --
 -- These queries work on flat properties and are suitable for quick Power BI
 -- DirectQuery connections to the SQL Endpoint.

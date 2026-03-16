@@ -23,6 +23,8 @@ import logging
 import sys
 import time
 import uuid
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -87,14 +89,14 @@ PERSONAS: list[UserPersona] = [
                 title="Bangkok budget trip",
                 messages=[
                     "Hi! I'm planning a solo backpacking trip to Bangkok.",
-                    "I'm a strict vegan and I need budget-friendly options. Hostels or cheap guesthouses are fine with me.",
-                    "Can you find me some vegan restaurants? I love street food and local markets.",
-                    "I'm really into cooking classes and temple visits. What activities do you recommend?",
-                    "What about nightlife? I like rooftop bars and live music venues.",
+                    "I'm a strict vegan and I need budget-friendly options. Find me hostels or cheap guesthouses near Khao San Road.",
+                    "I always prefer to stay in places with a social atmosphere where I can meet other travelers.",
+                    "Show me vegan restaurants in Bangkok. I love street food and I always eat at local markets rather than tourist spots.",
+                    "What activities do you recommend? I'm really into cooking classes and temple visits.",
+                    "I like to start my mornings early and do the main sightseeing before it gets too hot.",
                     "I also want to visit a floating market. Which one is the most authentic?",
-                    "Can you suggest a good night market for shopping?",
+                    "Can you suggest a good night market for shopping? I always spend my evenings exploring markets.",
                     "I think I want to try a traditional Thai massage too. Where is best?",
-                    "What about day trips from Bangkok? Ayutthaya looks interesting.",
                     "OK I have everything I need. Create a 4-day itinerary for April 5-8, 2026 please.",
                 ],
             ),
@@ -103,13 +105,13 @@ PERSONAS: list[UserPersona] = [
                 messages=[
                     "I want to visit Tokyo next! Still on a tight budget though.",
                     "Find me affordable capsule hotels or hostels in Shinjuku area.",
-                    "I need vegan ramen places -- do they exist in Tokyo?",
-                    "What free or cheap activities can I do? I love parks and street photography.",
-                    "I want to visit Akihabara for electronics and anime culture.",
-                    "What about Harajuku? I hear the street fashion is amazing.",
-                    "Show me the best spots for cherry blossom viewing.",
+                    "I need vegan ramen places -- do they exist in Tokyo? Show me restaurants with vegan options.",
+                    "I always walk everywhere instead of taking taxis. What free activities can I do on foot?",
+                    "I want to visit Akihabara for electronics and anime culture. What are the best shops?",
+                    "What about Harajuku? I hear the street fashion is amazing. Show me activities there.",
+                    "Show me the best spots for cherry blossom viewing. I prefer quieter parks over crowded tourist spots.",
                     "I also want to visit a traditional Japanese garden. Shinjuku Gyoen?",
-                    "Any budget-friendly izakayas that have vegan options?",
+                    "Find me budget-friendly izakayas that have vegan options. I usually eat dinner around 7pm.",
                     "Perfect, create a 3-day Tokyo plan for May 1-3, 2026.",
                 ],
             ),
@@ -138,14 +140,14 @@ PERSONAS: list[UserPersona] = [
                 title="Paris honeymoon",
                 messages=[
                     "My wife and I are planning our honeymoon in Paris! We want the most romantic experience possible.",
-                    "I want a luxury 5-star hotel with a view of the Eiffel Tower. Spa is a must.",
-                    "We both love French cuisine. Find us the best fine dining restaurants -- money is no object.",
-                    "We enjoy wine tasting, art galleries, and sunset river cruises. What do you recommend?",
+                    "Find us a luxury 5-star hotel with a view of the Eiffel Tower. Spa is a must.",
+                    "We always prefer boutique hotels with character over big chain hotels.",
+                    "Show us the best fine dining restaurants in Paris. We both love French cuisine and money is no object.",
+                    "We always eat dinner late, around 9pm, so we need restaurants that serve late.",
+                    "What activities do you recommend? We enjoy wine tasting, art galleries, and sunset river cruises.",
                     "We also want a private cooking class where we can learn to make French pastries together.",
                     "Which Michelin-starred restaurants should we definitely not miss? We love tasting menus.",
-                    "What about a day trip to Versailles? Is it worth the visit for a couple?",
-                    "Can you recommend a great champagne bar for an evening toast?",
-                    "What neighborhoods are best for a romantic evening stroll after dinner?",
+                    "We prefer to take our time at each place rather than rushing through a packed schedule.",
                     "Create a 5-day honeymoon itinerary for June 10-14, 2026. Make it unforgettable!",
                 ],
             ),
@@ -153,14 +155,14 @@ PERSONAS: list[UserPersona] = [
                 title="Anniversary in Rome",
                 messages=[
                     "We loved Paris so much! Now planning our first anniversary trip to Rome.",
-                    "Same luxury style -- 5-star hotel, preferably near the Colosseum or Spanish Steps.",
-                    "Find us the best Italian restaurants. We discovered we love truffle dishes in Paris.",
-                    "We want a private tour of the Vatican and a sunset visit to the Colosseum.",
-                    "Also interested in day trips to wine country -- Tuscany perhaps?",
-                    "What about a rooftop bar with a view of the Roman Forum? That sounds amazing.",
-                    "Are there any exclusive culinary experiences? Like a private pasta-making class in a Roman villa?",
-                    "We heard Trastevere is a charming neighborhood. What restaurants are best there?",
-                    "Can we do a gelato tasting tour? My wife has a serious sweet tooth.",
+                    "Find us a 5-star hotel near the Colosseum or Spanish Steps. Same luxury style as Paris.",
+                    "Show us the best Italian restaurants. We discovered we love truffle dishes in Paris.",
+                    "We want a private tour of the Vatican and a sunset visit to the Colosseum. What activities are available?",
+                    "We always book private tours instead of group tours. More intimate that way.",
+                    "Find us a rooftop bar or restaurant with a view of the Roman Forum.",
+                    "Are there any exclusive culinary experiences? Like a private pasta-making class?",
+                    "Show us restaurants in Trastevere. We heard it is the most charming neighborhood.",
+                    "We never skip dessert. Can we do a gelato tasting tour?",
                     "Build us a 4-day itinerary for October 15-18, 2026.",
                 ],
             ),
@@ -230,14 +232,14 @@ PERSONAS: list[UserPersona] = [
                 title="Singapore business trip",
                 messages=[
                     "I have a business conference in Singapore next month. Need to plan around my meetings.",
-                    "I need a business hotel with a good executive lounge and fast wifi. Near Marina Bay if possible.",
-                    "I usually eat halal food. Can you find me good halal restaurants near the conference center?",
-                    "I'll have free evenings -- what are the best cocktail bars and nightlife spots?",
-                    "On my last day, I'd like to do some sightseeing. Gardens by the Bay and the hawker centers.",
-                    "Which hawker centers have the best halal stalls? I want an authentic local experience.",
+                    "Find me a business hotel with a good executive lounge and fast wifi. Near Marina Bay if possible.",
+                    "I always stay at hotels with an executive lounge because I work late and need 24-hour coffee.",
+                    "I eat halal food. Show me good halal restaurants near the conference center.",
+                    "I'll have free evenings -- find me the best cocktail bars and nightlife spots.",
+                    "I always like to explore local food when traveling. Which hawker centers have the best halal stalls?",
+                    "What activities can I do on my last day? Gardens by the Bay looks amazing.",
                     "Is there a good rooftop bar at Marina Bay Sands? I hear the view is incredible.",
-                    "What about a quick visit to Sentosa Island? Is it worth the time?",
-                    "Can you recommend a tailor in Singapore? I want to get a custom suit while I'm there.",
+                    "I prefer to pack my schedule tight -- I never waste time on a business trip.",
                     "Plan a 3-day trip for March 20-22, 2026. Conference is 9am-5pm each day.",
                 ],
             ),
@@ -344,13 +346,13 @@ PERSONAS: list[UserPersona] = [
                 title="Lisbon slow travel",
                 messages=[
                     "We want to spend a week in Lisbon. Slow travel -- no rushing!",
-                    "We need a comfortable hotel with elevator access. Walking isn't our strong suit with all the hills.",
-                    "I have a nut allergy and my wife is lactose intolerant.",
-                    "We enjoy fado music, historic trams, and pastry shops. What do you recommend?",
-                    "Also interested in wine tastings at a relaxed pace.",
-                    "Which neighborhood is the flattest and easiest to walk around in?",
-                    "Can you find us a traditional fado restaurant where we can have dinner and a show?",
-                    "What about the famous Pasteis de Belem? Is it always crowded or are there quieter times to visit?",
+                    "Find us a comfortable hotel with elevator access. Walking is hard with all the hills.",
+                    "We always choose hotels that are close to public transport so we do not have to walk far.",
+                    "I have a nut allergy and my wife is lactose intolerant. Show us restaurants that can accommodate both.",
+                    "We enjoy fado music, historic trams, and pastry shops. What activities do you recommend?",
+                    "We always take an afternoon nap, so we prefer light mornings and evening activities.",
+                    "Find us a traditional fado restaurant where we can have dinner and a show.",
+                    "We prefer to eat dinner early, around 6pm, not the typical late European schedule.",
                     "My wife loves tiles and mosaics. Is there a good tile museum or workshop to visit?",
                     "Make us a 5-day Lisbon plan for April 20-24, 2026.",
                 ],
@@ -764,17 +766,24 @@ class DataGenerationRunner:
         tenant_id: str,
         delay: float,
         dry_run: bool = False,
+        parallel: int = 1,
     ):
         self.client = client
         self.tenant_id = tenant_id
         self.delay = delay
         self.dry_run = dry_run
+        self.parallel = max(1, parallel)
+        self._stats_lock = threading.Lock()
         self.stats = {
             "users_created": 0,
             "sessions_created": 0,
             "messages_sent": 0,
             "errors": 0,
         }
+
+    def _inc_stat(self, key: str, n: int = 1):
+        with self._stats_lock:
+            self.stats[key] += n
 
     def run(self, personas: list[UserPersona]):
         total_conversations = sum(len(p.conversations) for p in personas)
@@ -788,9 +797,10 @@ class DataGenerationRunner:
             "  Total messages:  %d\n"
             "  Tenant:         %s\n"
             "  Delay:          %.1fs between messages\n"
+            "  Parallel:       %d\n"
             "  Dry run:        %s",
             len(personas), total_conversations, total_messages,
-            self.tenant_id, self.delay, self.dry_run,
+            self.tenant_id, self.delay, self.parallel, self.dry_run,
         )
 
         if self.dry_run:
@@ -807,20 +817,51 @@ class DataGenerationRunner:
             sys.exit(1)
         log.info("Travel API is healthy.")
 
-        for i, persona in enumerate(personas, 1):
-            log.info(
-                "\n{'='*60}\n[%d/%d] PERSONA: %s (%s)\n{'='*60}",
-                i, len(personas), persona.name, persona.user_id,
-            )
-            self._run_persona(persona)
+        if self.parallel > 1:
+            self._run_parallel(personas)
+        else:
+            for i, persona in enumerate(personas, 1):
+                log.info(
+                    "\n{'='*60}\n[%d/%d] PERSONA: %s (%s)\n{'='*60}",
+                    i, len(personas), persona.name, persona.user_id,
+                )
+                self._run_persona(persona, self.client)
 
         self._print_summary(personas)
 
-    def _run_persona(self, persona: UserPersona):
+    def _run_parallel(self, personas: list[UserPersona]):
+        """Run multiple personas concurrently using threads."""
+        log.info("Running %d personas in parallel (max %d concurrent)...", len(personas), self.parallel)
+
+        def _worker(idx: int, persona: UserPersona):
+            # Each thread gets its own HTTP client (httpx.Client is not thread-safe)
+            client = TravelAppClient(base_url=self.client.base_url, timeout=self.client.client.timeout.read)
+            try:
+                log.info(
+                    "\n[%d/%d] PERSONA: %s (%s)",
+                    idx, len(personas), persona.name, persona.user_id,
+                )
+                self._run_persona(persona, client)
+            finally:
+                client.close()
+
+        with ThreadPoolExecutor(max_workers=self.parallel) as pool:
+            futures = {
+                pool.submit(_worker, i, p): p
+                for i, p in enumerate(personas, 1)
+            }
+            for future in as_completed(futures):
+                persona = futures[future]
+                try:
+                    future.result()
+                except Exception as e:
+                    log.error("Persona %s failed: %s", persona.name, e)
+
+    def _run_persona(self, persona: UserPersona, client: TravelAppClient):
         # 1 — Create user
         try:
-            self.client.create_user(self.tenant_id, persona)
-            self.stats["users_created"] += 1
+            client.create_user(self.tenant_id, persona)
+            self._inc_stat("users_created")
             log.info("  Created user: %s", persona.name)
         except httpx.HTTPStatusError as e:
             log.warning("  User creation issue for %s: %s", persona.user_id, e)
@@ -832,12 +873,12 @@ class DataGenerationRunner:
                 conv_idx, len(persona.conversations), conv.title,
             )
             try:
-                session_id = self.client.create_session(self.tenant_id, persona.user_id)
-                self.stats["sessions_created"] += 1
+                session_id = client.create_session(self.tenant_id, persona.user_id)
+                self._inc_stat("sessions_created")
                 log.info("  Session: %s", session_id)
             except httpx.HTTPStatusError as e:
                 log.error("  Failed to create session: %s", e)
-                self.stats["errors"] += 1
+                self._inc_stat("errors")
                 continue
 
             for msg_idx, message in enumerate(conv.messages, 1):
@@ -847,10 +888,10 @@ class DataGenerationRunner:
                     "..." if len(message) > 80 else "",
                 )
                 try:
-                    response_msgs = self.client.send_message(
+                    response_msgs = client.send_message(
                         self.tenant_id, persona.user_id, session_id, message
                     )
-                    self.stats["messages_sent"] += 1
+                    self._inc_stat("messages_sent")
 
                     # Extract the latest assistant response
                     assistant_msgs = [
@@ -869,13 +910,13 @@ class DataGenerationRunner:
                         )
                 except httpx.HTTPStatusError as e:
                     log.error("    Message failed (HTTP %s): %s", e.response.status_code, e)
-                    self.stats["errors"] += 1
+                    self._inc_stat("errors")
                 except httpx.ReadTimeout:
                     log.warning("    Message timed out — agents may need more time. Continuing...")
-                    self.stats["errors"] += 1
+                    self._inc_stat("errors")
                 except Exception as e:
                     log.error("    Unexpected error: %s", e)
-                    self.stats["errors"] += 1
+                    self._inc_stat("errors")
 
                 # Delay between messages
                 if msg_idx < len(conv.messages):
@@ -886,8 +927,8 @@ class DataGenerationRunner:
 
         # 3 — Report on generated data
         try:
-            memories = self.client.get_memories(self.tenant_id, persona.user_id)
-            trips = self.client.get_trips(self.tenant_id, persona.user_id)
+            memories = client.get_memories(self.tenant_id, persona.user_id)
+            trips = client.get_trips(self.tenant_id, persona.user_id)
             log.info(
                 "  >> %s now has %d memories and %d trips.",
                 persona.name, len(memories), len(trips),
@@ -1014,6 +1055,11 @@ def main():
         "--timeout", type=float, default=DEFAULT_TIMEOUT,
         help=f"HTTP timeout per request in seconds (default: {DEFAULT_TIMEOUT})",
     )
+    parser.add_argument(
+        "--parallel", type=int, default=1,
+        help="Run N personas concurrently (default: 1 = sequential). "
+             "Recommended: 3-4 to cut runtime by 3-4x. Requires sufficient Azure OpenAI TPM.",
+    )
     args = parser.parse_args()
 
     personas = PERSONAS[: args.personas] if args.personas else PERSONAS
@@ -1024,6 +1070,7 @@ def main():
         tenant_id=args.tenant,
         delay=args.delay,
         dry_run=args.dry_run,
+        parallel=args.parallel,
     )
 
     try:
