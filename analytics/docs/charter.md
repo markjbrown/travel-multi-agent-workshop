@@ -22,14 +22,24 @@ See `vision/agent-analytics-and-optimization-vision.md`. In short: make Microsof
 
 Memory salience tuning, memory retention/TTL policies, retrieval weighting, routing thresholds, tool/model selection policies, cost optimization — all **human-approved** at Levels 2–3 (and, for the single L4 slice only, auto-applied with guardrails). Higher-risk domains (prompt/workflow/agent-instruction/code changes) remain human-governed and out of scope for autonomous action.
 
-## Data readiness (verified 2026-07-07)
+## Data readiness (verified against live Azure Cosmos DB, 2026-07-07)
 
-The vision's "operational-state-first" thesis largely holds here: the app already persists rich per-turn state to Cosmos, but most of it is **not yet mirrored** to Fabric.
+Inspected the deployed account `cosmos-kfpokdh52vbec` / `TravelAssistant` directly via Entra ID. Findings corrected several earlier assumptions — **this is why we verify against real data**.
 
-- **Already captured in Cosmos:** `Debug` container (`store_debug_log`, per turn) holds agent transitions (`previous_agent`/`agent_selected`/`transfer_success`), `finish_reason`, `model_name`, and `input/output/total/cached` tokens + `tool_calls`; `ApiEvents` (`record_api_event`); `Checkpoints` (LangGraph state); `Sessions`/`Messages`. Rich `Memories` schema with lifecycle primitives (`boost_memory_salience`, `supersede_memory`, TTL).
-- **Mirrored today:** only `Memories`, `Users`, `Trips`, `Places`. So Pillars 1/2/3 are largely **"mirror + model"**, not "instrument from scratch."
-- **True instrumentation gaps:** per-turn **latency** (not stored in `Debug` today — Pillar 1); **`MemoryEvent` retrieval stream + memory↔outcome linkage** (Pillar 4); **`EvaluationResult` persistence to a mirrored Cosmos container** (Pillar 5; whether the `01_exercises/evaluation` harness writes to Cosmos is still to-verify); **workflow completion/abandonment/outcome labeling** (Pillar 6).
-- **Unifying model:** map this state to the vision's **Open Analytics Schema** (`AgentRun`, `AgentStep`, `AgentTransition`, `ToolInvocation`, `MemoryEvent`, `Checkpoint`, `EvaluationResult`, `TokenUsage`, `UserSession`, `WorkflowExecution`) → mirror → Fabric gold per pillar → surfaces. (Candidate ADR-0002.)
+**Containers with real, usable data:**
+- `Memories` (265): full schema — `memoryType`, `salience`, `ttl`, `lastUsedAt`, `extractedAt`, `facets`, `embedding[1024]`, `supersededBy` when applicable.
+- `Sessions` (86): `sessionId`, `userId`, `activeAgent`, `createdAt`, `lastActivityAt`, `status`, `messageCount` → maps to UserSession / WorkflowExecution.
+- `Messages` (690): `role`, `content`, `toolCalls`, `embedding[1024]`, `ts`, `keywords`, `superseded` → conversation turns.
+- `Trips` (35): nested `days[]` (morning/lunch/afternoon/dinner/accommodation + `placeId`); `Users` (16); `Places` (2937, `embedding[1536]`).
+
+**Containers that do NOT hold the data we assumed:**
+- `Debug` (334): the fields exist but the analytical ones are **empty** — verified `total_tokens=0`, `agent_selected="Unknown"`, `previous_agent="Unknown"`, `transfer_success=false` for **all 334** docs; only `model_name` (gpt-4.1-mini) is populated. Root causes (code-verified): (a) tokens read from `response_metadata.token_usage`, but the model runs `streaming=True` (`azure_open_ai.py:41`) so usage isn't surfaced without `stream_usage`/`include_usage` — to confirm by test; (b) `agent_selected`/transition only set when a `transfer_to_` tool call is detected in the passed messages (`travel_agents_api.py:703-708`), which isn't firing. Stored as an awkward EAV `propertyBag` array that needs pivoting for analytics.
+- `ApiEvents` (0) and `Summaries` (0): **empty** — `record_api_event` and summary creation aren't producing data in practice.
+- `Checkpoints` (19,472): opaque base64 **msgpack** blobs (`type: "msgpack"`) — high volume, low analytical value; **not recommended for mirroring**.
+
+**Implication (corrected):** Pillars 1/2/3 are **NOT** "mirror + model" — they require **fixing instrumentation** (real token capture; real agent/transition capture; add latency) and **regenerating data** before any analytics are possible. This couples directly to the data-generation redesign. Pillar 4 (memory) has real data today.
+
+**Unifying model:** map the app's operational state to the vision's **Open Analytics Schema** (`AgentRun`, `AgentStep`, `AgentTransition`, `ToolInvocation`, `MemoryEvent`, `Checkpoint`, `EvaluationResult`, `TokenUsage`, `UserSession`, `WorkflowExecution`) → mirror the useful subset → Fabric gold per pillar → surfaces. (See ADR-0002.)
 
 ## First principles (governing rules for this effort)
 

@@ -14,3 +14,4 @@ This log records every architectural decision for the Agent Analytics and Optimi
 | ADR | Title | Status | Date |
 |-----|-------|--------|------|
 | [0001](adr-0001-optimization-loop-surface-architecture.md) | Optimization-loop surface architecture: reverse-ETL to Azure Cosmos DB + web-app apply-loop | Accepted | 2026-07-07 |
+| [0002](adr-0002-open-analytics-schema-and-instrumentation.md) | Adopt the Open Analytics Schema, fix/extend instrumentation, and define the Fabric mirror set | Proposed | 2026-07-07 |
