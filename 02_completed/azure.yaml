@@ -122,7 +122,7 @@ hooks:
 
         echo ""
         echo "═══════════════════════════════════════════════════════════════"
-        echo "� Loading data into Cosmos DB..."
+        echo "Loading data into Cosmos DB..."
         echo "═══════════════════════════════════════════════════════════════"
         echo ""
 
@@ -200,7 +200,7 @@ hooks:
 
         Write-Host ""
         Write-Host "═══════════════════════════════════════════════════════════════"
-        Write-Host "� Loading data into Cosmos DB..."
+        Write-Host "Loading data into Cosmos DB..."
         Write-Host "═══════════════════════════════════════════════════════════════"
         Write-Host ""
 
