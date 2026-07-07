@@ -47,7 +47,7 @@ Container counts and shapes (Entra-ID query of the deployed account):
 | `Checkpoints` | 19,472 | **Opaque** base64 msgpack (`type:"msgpack"`) |
 
 `Debug` (client-side aggregate of all 334 docs): `total_tokens=0` for 334/334; `agent_selected="Unknown"` 334/334; `previous_agent="Unknown"` 334/334; `transfer_success=false` 334/334; only `model_name="gpt-4.1-mini-2025-04-14"` populated. Root causes (code-verified):
-- Tokens: read from `response_metadata.token_usage` (`travel_agents_api.py:687-690`); model runs `streaming=True` (`azure_open_ai.py:41`) → usage not surfaced without `stream_usage`/`include_usage`. *(Streaming cause is a strong hypothesis; confirm by live test.)*
+- Tokens: read from `response_metadata.token_usage` (`travel_agents_api.py:687-690`); model runs `streaming=True` (`azure_open_ai.py:41`) → `response_metadata.token_usage` is empty, so the extractor records `total_tokens=0`. **✅ Confirmed by live test (2026-07-07, langchain-openai 1.3.3):** with `streaming=True`, `response_metadata['token_usage'] = {}`. **Correction:** adding `stream_usage=True` does **not** repopulate that field (still `{}`); however `msg.usage_metadata` **is** populated in all variants (incl. plain `streaming=True`). The real fix is a **reader change** — read `msg.usage_metadata` (`input_tokens`/`output_tokens`/`total_tokens`; cached via `input_token_details.cache_read`) — not a model-config change. (Non-streaming also carries `latency_checkpoint` in `response_metadata` — a candidate latency source for Pillar 1.)
 - Agent/transition: `agent_selected`/`previous_agent`/`transfer_success` only set on detecting a `transfer_to_` tool call in the passed messages (`travel_agents_api.py:703-708`); that path isn't firing in practice.
 - Shape: stored as an EAV `propertyBag` array of `{key,value,timeStamp}` — needs pivoting for analytics.
 
@@ -56,7 +56,7 @@ Container counts and shapes (Entra-ID query of the deployed account):
 1. **Adopt the vision's Open Analytics Schema (10 primitives) as the canonical analytical model** for this solution.
 2. **Map primitives to real data where it exists:** `UserSession`/`WorkflowExecution` ← `Sessions` (+ derived outcome); `AgentStep` ← `Messages`; `MemoryEvent` target ← `Memories` + new retrieval events; Trips/Users/Places remain domain data.
 3. **Fix and extend instrumentation to emit the missing primitives into Cosmos** (each its own follow-up, some their own ADRs):
-   - **`TokenUsage`** — capture real per-call usage (enable streaming usage / non-streaming for accounting); required for Pillar 3.
+   - **`TokenUsage`** — capture real per-call usage by reading `msg.usage_metadata` (works with the existing `streaming=True`, no `stream_usage` flag needed) instead of the empty `response_metadata.token_usage`; required for Pillar 3.
    - **`AgentRun` / `AgentStep` / `AgentTransition`** — capture agent selected, previous agent, routing/handoff, and **per-turn latency** reliably (not only on transfer); Pillars 1/2.
    - **`ToolInvocation`** — per tool call (name, args summary, latency, success).
    - **`MemoryEvent`** — memory-retrieval events (which memories recalled, for which session/turn/query, similarity/salience) + outcome linkage; Pillar 4 depth.
@@ -75,7 +75,7 @@ Container counts and shapes (Entra-ID query of the deployed account):
 
 ## Open items to verify
 
-- **Confirm the streaming→no-usage hypothesis by live test**, then implement real `TokenUsage` capture and observe non-zero tokens.
+- ~~**Confirm the streaming→no-usage hypothesis by live test**~~ **✅ Done (2026-07-07):** root cause confirmed *and* the fix corrected — read `msg.usage_metadata` (populated under `streaming=True`); `stream_usage=True` does not help `response_metadata.token_usage`. Evidence: `analytics/docs/verification/2026-07-07-token-capture.md`. Next: implement the reader change and observe non-zero tokens end-to-end.
 - **Measure the RU/cost impact** of mirroring the additional containers.
 - **Finalize the new container set + partition keys** (align with existing `[tenant_id, user_id, session_id]` hierarchy where possible).
 - **Confirm** whether the `01_exercises/evaluation` harness can/should write `EvaluationResult` to Cosmos.
