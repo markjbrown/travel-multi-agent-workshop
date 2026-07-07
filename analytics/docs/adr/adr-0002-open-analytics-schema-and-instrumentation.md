@@ -27,7 +27,7 @@ A **live audit of the deployed Azure Cosmos DB** (`cosmos-kfpokdh52vbec` / `Trav
 Map primitives to existing containers where data is real; add/repair emission where it is missing; exclude opaque/empty containers from mirroring.
 
 ### Option C — Rely on external telemetry (LangSmith / OpenTelemetry) as the analytics source
-**Rejected as the primary path.** Not mirrored into Fabric, external dependency; conflicts with the vision's "operational-state-first" and Cosmos-as-SoR. May *enrich* later (the vision allows OTel/OpenInference enrichment).
+**Rejected as the primary path.** Not mirrored into Fabric, external dependency; conflicts with the vision's "operational-state-first" and Cosmos-as-SoR. May *enrich* later (the vision allows OTel/OpenInference enrichment). **See ADR-0003**, which resolves the follow-up ("does this make the job harder / would other frameworks adopt LangSmith or OTel?"): the interop target is **OpenTelemetry GenAI semconv** (not LangSmith), the Open Analytics Schema is aligned to it, and ingestion is made source-pluggable — so OTel/OpenInference can be added later as adapter sources without re-modeling.
 
 ## Evidence (live data, 2026-07-07)
 
@@ -56,14 +56,14 @@ Container counts and shapes (Entra-ID query of the deployed account):
 1. **Adopt the vision's Open Analytics Schema (10 primitives) as the canonical analytical model** for this solution.
 2. **Map primitives to real data where it exists:** `UserSession`/`WorkflowExecution` ← `Sessions` (+ derived outcome); `AgentStep` ← `Messages`; `MemoryEvent` target ← `Memories` + new retrieval events; Trips/Users/Places remain domain data.
 3. **Fix and extend instrumentation to emit the missing primitives into Cosmos** (each its own follow-up, some their own ADRs):
-   - **`TokenUsage`** — capture real per-call usage by reading `msg.usage_metadata` (works with the existing `streaming=True`, no `stream_usage` flag needed) instead of the empty `response_metadata.token_usage`; required for Pillar 3.
+   - **`TokenUsage`** — capture real per-call usage by reading `msg.usage_metadata` (works with the existing `streaming=True`, no `stream_usage` flag needed) instead of the empty `response_metadata.token_usage`; required for Pillar 3. **Name fields to OTel GenAI semconv** (per ADR-0003): `gen_ai.usage.input_tokens` / `output_tokens`, cached via `gen_ai.usage.cache_read.input_tokens`.
    - **`AgentRun` / `AgentStep` / `AgentTransition`** — capture agent selected, previous agent, routing/handoff, and **per-turn latency** reliably (not only on transfer); Pillars 1/2.
    - **`ToolInvocation`** — per tool call (name, args summary, latency, success).
    - **`MemoryEvent`** — memory-retrieval events (which memories recalled, for which session/turn/query, similarity/salience) + outcome linkage; Pillar 4 depth.
    - **`EvaluationResult`** — persist evaluator outputs to a Cosmos container; Pillar 5.
    - **`Checkpoint`** — store *metadata only* (ids/timestamps/parent), not the msgpack blob, if needed at all.
    - **`WorkflowExecution`** — session-level outcome/completion labeling; Pillar 6.
-   - Prefer **flat, analytics-friendly fields** over the EAV `propertyBag`.
+   - Prefer **flat, analytics-friendly fields** over the EAV `propertyBag`, and **name fields to OTel GenAI semconv (`gen_ai.*`) where a counterpart exists** (per ADR-0003) so future OTel/OpenInference sources map 1:1.
 4. **Fabric mirror set:** mirror `Memories`, `Sessions`, `Messages`, `Trips`, `Users`, `Places`, **plus the new/fixed telemetry containers** (working names: `AgentEvents`, `MemoryEvents`, `EvaluationResults`). **Do NOT mirror** `Checkpoints` (opaque, 19k+), `ApiEvents` (empty/unused), or `Summaries` (empty) unless a concrete need appears.
 5. **Regenerate data after the instrumentation fixes** so Pillars 1/2/3 have real signals (couples to the data-generation redesign — separate ADR).
 
