@@ -48,7 +48,17 @@ SUMMARY (extractor-visible total_tokens, usage_metadata total):
   C_streaming_false                      rm=    35  um=    35
 ```
 
-## Findings
+## ⚠️ Version-accurate correction (2026-07-07, added after end-to-end testing)
+The probe below was run with **`langchain-openai 1.3.3`**, but the **app pins `langchain-openai==0.3.3`** (`requirements.txt`). Behavior differs, and the difference matters:
+- On **0.3.3**, plain `streaming=True` leaves **both** `response_metadata['token_usage']` **and** `msg.usage_metadata` **empty** — so a reader-only change does **nothing** (confirmed: an initial reader-only fix still logged `total_tokens=0` end-to-end).
+- The working fix on 0.3.3 is **two parts** (verified live, PR #70): (1) set `model_kwargs={"stream_options": {"include_usage": True}}` on the model so it emits a usage chunk that LangChain aggregates into `usage_metadata`, **and** (2) read `msg.usage_metadata`. After this, a 3-message session recorded real totals `2618 / 3178 / 3412` (0 before).
+- Note `stream_usage=True` as a **constructor kwarg** is **not** accepted in 0.3.3 (it forwards to `Completions.create()` and errors); use `model_kwargs.stream_options` instead.
+
+**Lesson:** always verify against the app's *pinned* dependency versions, not the latest. The findings below (1.3.3) are retained for history but superseded by this correction for the app.
+
+---
+
+
 1. **Root cause confirmed.** With `streaming=True`, `response_metadata['token_usage']` is `{}`, so
    the extractor at `travel_agents_api.py:687-690` records `total_tokens=0`. This reproduces the
    334/334 zero-token audit result exactly.

@@ -56,7 +56,7 @@ Container counts and shapes (Entra-ID query of the deployed account):
 1. **Adopt the vision's Open Analytics Schema (10 primitives) as the canonical analytical model** for this solution.
 2. **Map primitives to real data where it exists:** `UserSession`/`WorkflowExecution` ← `Sessions` (+ derived outcome); `AgentStep` ← `Messages`; `MemoryEvent` target ← `Memories` + new retrieval events; Trips/Users/Places remain domain data.
 3. **Fix and extend instrumentation to emit the missing primitives into Cosmos** (each its own follow-up, some their own ADRs):
-   - **`TokenUsage`** — capture real per-call usage by reading `msg.usage_metadata` (works with the existing `streaming=True`, no `stream_usage` flag needed) instead of the empty `response_metadata.token_usage`; required for Pillar 3. **Name fields to OTel GenAI semconv** (per ADR-0003): `gen_ai.usage.input_tokens` / `output_tokens`, cached via `gen_ai.usage.cache_read.input_tokens`.
+   - **`TokenUsage`** — capture real per-call usage. **On the app's pinned `langchain-openai==0.3.3` this requires BOTH** (verified end-to-end 2026-07-07, PR #70): (a) set `model_kwargs={"stream_options": {"include_usage": True}}` on the model in `azure_open_ai.py` (under plain `streaming=True`, 0.3.3 leaves `usage_metadata=None`), and (b) read `msg.usage_metadata` instead of the empty `response_metadata.token_usage`. Required for Pillar 3. **Name fields to OTel GenAI semconv** (per ADR-0003): `gen_ai.usage.input_tokens` / `output_tokens`, cached via `gen_ai.usage.cache_read.input_tokens`.
    - **`AgentRun` / `AgentStep` / `AgentTransition`** — capture agent selected, previous agent, routing/handoff, and **per-turn latency** reliably (not only on transfer); Pillars 1/2.
    - **`ToolInvocation`** — per tool call (name, args summary, latency, success).
    - **`MemoryEvent`** — memory-retrieval events (which memories recalled, for which session/turn/query, similarity/salience) + outcome linkage; Pillar 4 depth.
@@ -75,7 +75,7 @@ Container counts and shapes (Entra-ID query of the deployed account):
 
 ## Open items to verify
 
-- ~~**Confirm the streaming→no-usage hypothesis by live test**~~ **✅ Done (2026-07-07):** root cause confirmed *and* the fix corrected — read `msg.usage_metadata` (populated under `streaming=True`); `stream_usage=True` does not help `response_metadata.token_usage`. Evidence: `analytics/docs/verification/2026-07-07-token-capture.md`. Next: implement the reader change and observe non-zero tokens end-to-end.
+- ~~**Confirm the streaming→no-usage hypothesis by live test**~~ **✅ Done (2026-07-07); IMPLEMENTED + tested end-to-end (PR #70).** Root cause confirmed. **Version-accurate correction:** the initial probe used `langchain-openai 1.3.3` (where plain `streaming=True` populates `usage_metadata`), but the app pins **`0.3.3`**, where `streaming=True` leaves both `response_metadata.token_usage` **and** `usage_metadata` empty. The working fix (verified live: `total_tokens` 2618/3178/3412 vs 0 before) is **two parts**: (1) `model_kwargs={"stream_options": {"include_usage": True}}` on the model, and (2) read `msg.usage_metadata`. Evidence: `analytics/docs/verification/2026-07-07-token-capture.md`.
 - **Measure the RU/cost impact** of mirroring the additional containers.
 - **Finalize the new container set + partition keys** (align with existing `[tenant_id, user_id, session_id]` hierarchy where possible).
 - **Confirm** whether the `01_exercises/evaluation` harness can/should write `EvaluationResult` to Cosmos.
