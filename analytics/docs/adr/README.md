@@ -1,0 +1,16 @@
+# Architecture Decision Records (ADR)
+
+This log records every architectural decision for the Agent Analytics and Optimization initiative. Each ADR captures the context, the options considered, the **evidence** behind the decision, the decision itself, and its consequences.
+
+## Process
+
+- New decision → copy `adr-template.md` to `adr-NNNN-short-title.md` (next number), fill it in, set status **Proposed**.
+- When agreed → set status **Accepted** with the date.
+- If a later decision changes an earlier one → add a new ADR and set the old one's status to **Superseded by ADR-NNNN** (do not delete history).
+- Every feasibility claim in an ADR must cite evidence: a file/line, a command run and its observed output, an authoritative doc URL, or a live test result. Untested claims must be labelled as open items, not asserted.
+
+## Index
+
+| ADR | Title | Status | Date |
+|-----|-------|--------|------|
+| [0001](adr-0001-optimization-loop-surface-architecture.md) | Optimization-loop surface architecture: reverse-ETL to Azure Cosmos DB + web-app apply-loop | Accepted | 2026-07-07 |
