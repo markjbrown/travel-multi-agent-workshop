@@ -7,7 +7,9 @@
 
 ## Context
 
-The workshop scope (see charter) targets **Pillar 4 — Memory Intelligence** through **Level 2 (Recommendations)** and **Level 3 (Assisted Optimization)**. Unlike Level 1 (Visibility), these levels require a *closed loop*: the platform must generate memory-optimization recommendations, present them for human approval, and **write approved changes back into the operational store** (adjust memory salience, retention/TTL, retire stale/conflicting memories, tune retrieval weighting).
+The workshop scope (see charter) covers **all six analytics pillars** through **Levels 1–3**, with a single bounded **Level 4** slice, and **Pillar 4 — Memory Intelligence** as the flagship. Unlike Level 1 (Visibility), Levels 2–3 require a *closed loop*: the platform must generate optimization recommendations, present them for human approval, and **write approved changes back into the operational store** (adjust memory salience, retention/TTL, retire stale/conflicting memories, tune retrieval weighting, adjust routing/model policies).
+
+> **Scope note (2026-07-07):** this ADR was first written when scope was Pillar 4 only. Scope has since broadened to all six pillars; the decision below is unaffected and generalizes — the reverse-ETL + web-app apply-loop is the surface for *any* pillar's optimization actions. Write-back is concentrated in memory (Pillar 4) and routing/model policies (Pillars 2/3); Pillars 1/5/6 are more visibility-oriented.
 
 The vision fixes a hard constraint: **Azure Cosmos DB is the operational system of record**; Fabric is the analytical/optimization layer. The already-deployed travel app runs on an **Azure** Cosmos DB account (not Cosmos-in-Fabric).
 

@@ -8,16 +8,28 @@ See `vision/agent-analytics-and-optimization-vision.md`. In short: make Microsof
 
 ## Scope of this workshop implementation
 
-- **Pillar focus:** Pillar 4 — **Memory Intelligence** (the vision's flagship pillar), built on the existing travel multi-agent app.
-- **Maturity target:** advance from Level 1 (Visibility) through **Level 2 (Recommendations)** and **Level 3 (Assisted Optimization)** for memory — i.e., generate memory-optimization recommendations, present them for human review, and apply approved changes back to the operational store.
+- **Pillar coverage:** **all six** analytics pillars from the vision — (1) Agent Performance, (2) Agent Collaboration, (3) Cost Intelligence, (4) Memory Intelligence, (5) Evaluation Intelligence, (6) Workflow Intelligence — built on the existing travel multi-agent app. Memory Intelligence (Pillar 4) is treated as the flagship where we go deepest.
+- **Maturity target (confirmed 2026-07-07):**
+  - **Levels 1–3 are the buildable core across all pillars:** Visibility (dashboards/semantic model), Recommendations, and Assisted Optimization (propose changes + human approval + apply to the operational store).
+  - **Level 4 (Autonomous Optimization): one bounded, honestly-caveated slice** on the lowest-risk domain(s) (e.g., autonomous memory-salience decay / retention pruning; possibly a routing-threshold or model-selection policy) implemented as a scheduled, rule-governed, **reversible + audited** job with a measure→auto-rollback guard. **Honesty caveat:** with synthetic workshop data there is no real outcome signal, so the "validate it improved outcomes" step is **illustrative/demonstrative, not proof**. We demonstrate the autonomy *mechanism and safety loop*, transparently flagged.
+  - **Level 5 (Adaptive Agent Systems): conceptual framing only** — an emergent operational maturity from running L4 across many agents over time; narrated/diagrammed, not implemented.
 - **Deliverables:**
   1. A full functional implementation in `02_completed/`.
-  2. One or two workshop modules in `01_exercises/` teaching users to build it themselves, with clear learning elements.
+  2. Workshop modules in `01_exercises/` teaching users to build it themselves, with clear learning elements. The all-pillars scope exceeds "one or two modules" — and that is acceptable: **modules may be longer, more numerous, or both** (confirmed 2026-07-07). Coverage should still teach the *pattern* coherently (memory-led), with less central pillars presented more briefly or as reference. Final module count/curation is decided at authoring time (see Open Questions).
   3. This knowledge base (vision, charter, ADRs, deep docs) kept current.
 
 ### Lower-risk optimization domains in scope (per the vision's Human-Governed principle)
 
-Memory salience tuning, memory retention/TTL policies, and retrieval weighting — all **human-approved** before apply. Higher-risk domains (prompt/workflow/agent-instruction changes) remain out of scope for autonomous action.
+Memory salience tuning, memory retention/TTL policies, retrieval weighting, routing thresholds, tool/model selection policies, cost optimization — all **human-approved** at Levels 2–3 (and, for the single L4 slice only, auto-applied with guardrails). Higher-risk domains (prompt/workflow/agent-instruction/code changes) remain human-governed and out of scope for autonomous action.
+
+## Data readiness (verified 2026-07-07)
+
+The vision's "operational-state-first" thesis largely holds here: the app already persists rich per-turn state to Cosmos, but most of it is **not yet mirrored** to Fabric.
+
+- **Already captured in Cosmos:** `Debug` container (`store_debug_log`, per turn) holds agent transitions (`previous_agent`/`agent_selected`/`transfer_success`), `finish_reason`, `model_name`, and `input/output/total/cached` tokens + `tool_calls`; `ApiEvents` (`record_api_event`); `Checkpoints` (LangGraph state); `Sessions`/`Messages`. Rich `Memories` schema with lifecycle primitives (`boost_memory_salience`, `supersede_memory`, TTL).
+- **Mirrored today:** only `Memories`, `Users`, `Trips`, `Places`. So Pillars 1/2/3 are largely **"mirror + model"**, not "instrument from scratch."
+- **True instrumentation gaps:** per-turn **latency** (not stored in `Debug` today — Pillar 1); **`MemoryEvent` retrieval stream + memory↔outcome linkage** (Pillar 4); **`EvaluationResult` persistence to a mirrored Cosmos container** (Pillar 5; whether the `01_exercises/evaluation` harness writes to Cosmos is still to-verify); **workflow completion/abandonment/outcome labeling** (Pillar 6).
+- **Unifying model:** map this state to the vision's **Open Analytics Schema** (`AgentRun`, `AgentStep`, `AgentTransition`, `ToolInvocation`, `MemoryEvent`, `Checkpoint`, `EvaluationResult`, `TokenUsage`, `UserSession`, `WorkflowExecution`) → mirror → Fabric gold per pillar → surfaces. (Candidate ADR-0002.)
 
 ## First principles (governing rules for this effort)
 
@@ -34,6 +46,9 @@ Memory salience tuning, memory retention/TTL policies, and retrieval weighting �
 
 ## Open questions to resolve with evidence (tracked, not yet decided)
 
-- **Data generation for the workshop:** the current live generator costs ~3 hrs / ~10M tokens (per `analytics/README.md`) — not workshop-viable. Need a tested, low-cost data path that also produces the new signals Level 2/3 requires (memory-retrieval events + outcome linkage).
-- **Memory-effectiveness instrumentation:** the app currently records `lastUsedAt` on recall but no retrieval **event stream** and no link between recalled memories and turn outcomes. Level 2/3 recommendations depend on adding this (the vision's `MemoryEvent` primitive). To be designed and validated.
+- **Data generation for the workshop:** the current live generator costs ~3 hrs / ~10M tokens (per `analytics/README.md`) — not workshop-viable. Need a tested, low-cost data path that also produces the new signals Levels 2–3 require across pillars (memory-retrieval events + outcome linkage, latency, evaluation results, etc.).
+- **Open Analytics Schema + mirror-set expansion (candidate ADR-0002):** adopt the vision's 10 core primitives as the canonical instrumentation model emitted to Cosmos, and expand Fabric Mirroring to include `Debug`, `ApiEvents`, `Checkpoints`, `Sessions`, `Messages`. To be decided and validated (RU/cost impact of mirroring more containers to be measured).
+- **Per-pillar instrumentation gaps:** latency (Pillar 1), `MemoryEvent` stream + outcome linkage (Pillar 4), `EvaluationResult` persistence to Cosmos (Pillar 5), workflow outcome labeling (Pillar 6). Each to be designed and validated.
+- **L4 outcome-validation honesty:** define the proxy/illustrative outcome signal used for the single autonomous slice, and label it clearly as demonstrated-on-synthetic-data.
+- **Module curation:** with modules allowed to be longer/more numerous, decide the final module arc at authoring time — how many pillars get full build-along treatment vs. reference.
 - **Power BI role:** whether/how to keep Power BI as an optional Level-1 visibility surface once the web-app loop exists.
