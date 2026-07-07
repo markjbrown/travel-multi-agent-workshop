@@ -8,18 +8,21 @@ services:
     docker:
       path: ./Dockerfile.mcp
       context: .
+      remoteBuild: true
   api:
     host: containerapp
     language: python
     docker:
       path: ./Dockerfile.api
       context: .
+      remoteBuild: true
   frontend:
     host: containerapp
     language: ts
     docker:
       path: ./Dockerfile.frontend
       context: .
+      remoteBuild: true
 hooks:
   preprovision:
     posix:
