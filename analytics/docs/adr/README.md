@@ -16,3 +16,4 @@ This log records every architectural decision for the Agent Analytics and Optimi
 | [0001](adr-0001-optimization-loop-surface-architecture.md) | Optimization-loop surface architecture: reverse-ETL to Azure Cosmos DB + web-app apply-loop | Accepted | 2026-07-07 |
 | [0002](adr-0002-open-analytics-schema-and-instrumentation.md) | Adopt the Open Analytics Schema, fix/extend instrumentation, and define the Fabric mirror set | Proposed | 2026-07-07 |
 | [0003](adr-0003-source-pluggable-ingestion-otel-alignment.md) | Source-pluggable ingestion; OTel GenAI semconv as interop standard; Open Analytics Schema as first-party normalization layer | Proposed | 2026-07-07 |
+| [0004](adr-0004-data-generation-redesign.md) | Data-generation redesign: cheap, reproducible, real-enough analytics data (fixture-first + optional live) | Proposed | 2026-07-07 |
