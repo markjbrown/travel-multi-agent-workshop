@@ -40,7 +40,8 @@ The OAS stays first-party (it must, to carry operational-state primitives OTel l
 
 ### Framework adoption (verified 2026-07-07)
 - **LangSmith** is a LangChain-oriented vendor backend; it now supports **OTLP** import/export but is not a neutral cross-framework standard. In this app it is already wired opt-in via `@langsmith.traceable` (`02_completed/python/src/app/travel_agents.py:24`, `services/azure_cosmos_db.py:11`, `mcp_server/mcp_http_server.py:6`) and `LANGCHAIN_*` env.
-- **OpenTelemetry GenAI semconv** is the emerging cross-framework standard. **Microsoft Agent Framework and Semantic Kernel emit `gen_ai.*` spans natively**; LangChain/CrewAI/AutoGen converge on it; OpenAI Agents SDK has OTel exporters.
+- **OpenTelemetry GenAI semconv** is the emerging cross-framework standard. **Microsoft Agent Framework emits `gen_ai.*` spans natively** — verified against its Learn observability doc (updated 2026-06-26): it "emits traces, logs, and metrics according to the OpenTelemetry GenAI Semantic Conventions," enabled via `.UseOpenTelemetry(sourceName)` (chat client) / `.WithOpenTelemetry(sourceName)` (agent), default source `Experimental.Microsoft.Agents.AI`. Semantic Kernel shares this lineage; LangChain/CrewAI/AutoGen converge on it; OpenAI Agents SDK has OTel exporters. *(Caution: a web-search summary returned invented attribute names like `genai.agent.tool_calls`/`genai.llm.model_id`; these are NOT real `gen_ai.*` names and were discarded in favor of the authoritative registry.)*
+- **Version pinned:** the dedicated `open-telemetry/semantic-conventions-genai` repo has **no release tags** (GitHub tags API returned `[]`, 2026-07-07); this ADR maps against `main` commit **`c321d7eb4443ae1d1d88c2e24eda849f62049008`** (2026-07-04). Track drift against that SHA.
 - **Status caveat:** every `gen_ai.*` attribute in the authoritative registry is badged **Development** (experimental), i.e. widely used but not frozen — so we *align to* it, we don't *depend on* it yet. Source: OpenTelemetry GenAI semantic-conventions repo (registry + spans docs).
 
 ### OAS ↔ OTel GenAI semconv mapping (authoritative `gen_ai.*` names)
@@ -61,6 +62,15 @@ Verified against the OTel GenAI registry (`docs/registry/attributes/gen-ai.md`) 
 
 **Reading:** OTel cleanly standardizes ~6 of 10 primitives; the remaining 3–4 (AgentTransition, Checkpoint, WorkflowExecution, plus memory *lifecycle* depth) are exactly the operational-state concepts that justify Cosmos-as-primary — the parts an ephemeral trace standard does not carry. So sourcing from Cosmos does **not** make the core job harder; the standardized parts we adopt for free via naming, and the non-standardized parts are our value-add.
 
+### OpenInference divergence (verified 2026-07-07, `Arize-ai/openinference` spec)
+OpenInference is a **second** open standard and its names **differ from OTel** — the adapter must translate, not assume identity. Key deltas (verified against `spec/semantic_conventions.md`):
+- **Span typing:** a required `openinference.span.kind` (`LLM`/`TOOL`/`AGENT`/`RETRIEVER`/`EVALUATOR`/…) rather than OTel's `gen_ai.operation.name`.
+- **Tokens:** `llm.token_count.prompt` / `llm.token_count.completion` / `llm.token_count.total`, cached via `llm.token_count.prompt_details.cache_read` — vs OTel's `gen_ai.usage.input_tokens`/`output_tokens`/`cache_read.input_tokens`. (Note prompt/completion vs input/output naming.)
+- **Provider/model:** `llm.provider`, `llm.model_name`, `llm.finish_reason` — vs `gen_ai.provider.name`, `gen_ai.response.model`, `gen_ai.response.finish_reasons`.
+- **Bonus OpenInference has that OTel lacks:** explicit **cost** fields (`llm.cost.prompt`/`completion`/`total` in USD) — worth adopting for Pillar 3 cost analytics.
+
+**Implication:** OAS field definitions should carry mappings to **both** vocabularies (OTel `gen_ai.*` and OpenInference `llm.*`), since the two "open" standards disagree on token/provider naming.
+
 ## Decision
 
 1. **The Open Analytics Schema remains first-party** (it must, to carry operational-state primitives OTel omits), and is **defined as a normalization layer explicitly aligned to OpenTelemetry GenAI semantic conventions and OpenInference.** Each OAS field records its `gen_ai.*` counterpart where one exists (start with the table above).
@@ -76,13 +86,15 @@ Verified against the OTel GenAI registry (`docs/registry/attributes/gen-ai.md`) 
 
 ## Open items to verify
 
-- **Confirm Microsoft Agent Framework's exact `gen_ai.*` emission** against its current docs/SDK before we build that adapter (spans emitted, attribute coverage, any deviations).
-- **Confirm OpenInference span/attribute names** we will map to (separate from OTel) before claiming 1:1 there.
-- **Pin a semconv version** (record the exact semantic-conventions-genai release we mapped against) so drift is detectable.
+- ~~**Confirm Microsoft Agent Framework's exact `gen_ai.*` emission**~~ **✅ Done (2026-07-07):** verified against the Learn observability doc — emits OTel GenAI semconv via `.UseOpenTelemetry`/`.WithOpenTelemetry`, source `Experimental.Microsoft.Agents.AI`. When we build that adapter, confirm the exact span/attribute *coverage* against a live capture (doc asserts conformance; capture confirms completeness).
+- ~~**Confirm OpenInference span/attribute names**~~ **✅ Done (2026-07-07):** verified; names diverge from OTel (see "OpenInference divergence"). Adapter must translate token/provider names; OpenInference adds `llm.cost.*`.
+- ~~**Pin a semconv version**~~ **✅ Done:** no release tags exist; pinned to `semantic-conventions-genai` `main` @ `c321d7eb` (2026-07-04). Re-check on drift.
+- **Remaining:** capture a **live** OTel/OpenInference span from each target framework before building its adapter, to confirm attribute completeness (doc conformance ≠ observed emission).
 
 ## References
 
-- OpenTelemetry GenAI semantic conventions — registry: `https://github.com/open-telemetry/semantic-conventions-genai` (`docs/registry/attributes/gen-ai.md`, `docs/gen-ai/gen-ai-spans.md`). Status: Development/experimental (2026-07-07).
-- OpenInference (Arize) — open schema for LLM/agent spans.
+- OpenTelemetry GenAI semantic conventions — `https://github.com/open-telemetry/semantic-conventions-genai` @ `main` `c321d7eb4443ae1d1d88c2e24eda849f62049008` (2026-07-04); files `docs/registry/attributes/gen-ai.md`, `docs/gen-ai/gen-ai-spans.md`. Status: Development/experimental. No release tags as of 2026-07-07.
+- Microsoft Agent Framework — Observability: `https://learn.microsoft.com/en-us/agent-framework/agents/observability` (updated 2026-06-26).
+- OpenInference (Arize) — `https://github.com/Arize-ai/openinference` (`spec/semantic_conventions.md`).
 - Vision: `../vision/agent-analytics-and-optimization-vision.md:191–206, 275–292, 351`.
 - Token-capture verification: `../verification/2026-07-07-token-capture.md`.
