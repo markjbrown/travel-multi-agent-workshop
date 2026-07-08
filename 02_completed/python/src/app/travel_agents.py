@@ -19,7 +19,7 @@ from langchain_core.messages import ToolMessage, SystemMessage, AIMessage
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.graph import StateGraph, START, MessagesState
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent
 from langgraph.types import Command, interrupt
 from langsmith import traceable
 from langgraph_checkpoint_cosmosdb import CosmosDBSaver
@@ -258,40 +258,40 @@ async def setup_agents():
     logger.info(f"   Summarizer: {len(summarizer_tools)} tools")
     
     # Create agents with their tools
-    orchestrator_agent = create_react_agent(
+    orchestrator_agent = create_agent(
         model, 
         orchestrator_tools, 
-        prompt=load_prompt("orchestrator")
+        system_prompt=load_prompt("orchestrator")
     )
     
-    hotel_agent = create_react_agent(
+    hotel_agent = create_agent(
         model,
         hotel_tools,
-        prompt=load_prompt("hotel_agent")
+        system_prompt=load_prompt("hotel_agent")
     )
     
-    activity_agent = create_react_agent(
+    activity_agent = create_agent(
         model,
         activity_tools,
-        prompt=load_prompt("activity_agent")
+        system_prompt=load_prompt("activity_agent")
     )
     
-    dining_agent = create_react_agent(
+    dining_agent = create_agent(
         model,
         dining_tools,
-        prompt=load_prompt("dining_agent")
+        system_prompt=load_prompt("dining_agent")
     )
     
-    itinerary_generator_agent = create_react_agent(
+    itinerary_generator_agent = create_agent(
         model,
         itinerary_generator_tools,
-        prompt=load_prompt("itinerary_generator")
+        system_prompt=load_prompt("itinerary_generator")
     )
     
-    summarizer_agent = create_react_agent(
+    summarizer_agent = create_agent(
         model,
         summarizer_tools,
-        prompt=load_prompt("summarizer")
+        system_prompt=load_prompt("summarizer")
     )
     
     logger.info("✅ All agents created successfully\n")
