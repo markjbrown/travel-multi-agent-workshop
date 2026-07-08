@@ -1,6 +1,6 @@
 # ADR-0005: Modernize the workshop dependency stack (langchain / langgraph / openai to latest majors)
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-07-07
 - **Deciders:** Mark Brown (@markjbrown), with agent analysis
 - **Related:** `../verification/2026-07-07-langgraph-1x-checkpointer-derisk.md`, ADR-0002 (instrumentation), ADR-0004 (data-gen). Builds on the four merged fixes (PRs #69–#72).
