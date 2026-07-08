@@ -67,6 +67,21 @@ def filter_tools_by_prefix(tools, prefixes):
     return [tool for tool in tools if any(tool.name.startswith(prefix) for prefix in prefixes)]
 
 
+def tool_content_text(content) -> str:
+    """Normalize message content to plain text.
+
+    langchain-core 1.x returns tool/message content as a list of content blocks
+    (e.g. [{"type": "text", "text": "..."}]) rather than a plain string. This
+    flattens either representation to text so callers can json.loads() a tool's
+    JSON result (e.g. the `goto` routing field) regardless of library version.
+    """
+    if isinstance(content, list):
+        return "".join(
+            block.get("text", "") for block in content if isinstance(block, dict)
+        )
+    return content if isinstance(content, str) else str(content)
+
+
 def format_conflict_message(conflicts: list) -> str:
     """
     Format conflict information for user confirmation.
@@ -246,37 +261,37 @@ async def setup_agents():
     orchestrator_agent = create_react_agent(
         model, 
         orchestrator_tools, 
-        state_modifier=load_prompt("orchestrator")
+        prompt=load_prompt("orchestrator")
     )
     
     hotel_agent = create_react_agent(
         model,
         hotel_tools,
-        state_modifier=load_prompt("hotel_agent")
+        prompt=load_prompt("hotel_agent")
     )
     
     activity_agent = create_react_agent(
         model,
         activity_tools,
-        state_modifier=load_prompt("activity_agent")
+        prompt=load_prompt("activity_agent")
     )
     
     dining_agent = create_react_agent(
         model,
         dining_tools,
-        state_modifier=load_prompt("dining_agent")
+        prompt=load_prompt("dining_agent")
     )
     
     itinerary_generator_agent = create_react_agent(
         model,
         itinerary_generator_tools,
-        state_modifier=load_prompt("itinerary_generator")
+        prompt=load_prompt("itinerary_generator")
     )
     
     summarizer_agent = create_react_agent(
         model,
         summarizer_tools,
-        state_modifier=load_prompt("summarizer")
+        prompt=load_prompt("summarizer")
     )
     
     logger.info("✅ All agents created successfully\n")
@@ -597,7 +612,7 @@ def get_active_agent(state: MessagesState, config) -> str:
     for message in reversed(state['messages']):
         if isinstance(message, ToolMessage):
             try:
-                content_json = json.loads(message.content)
+                content_json = json.loads(tool_content_text(message.content))
                 activeAgent = content_json.get("goto")
                 if activeAgent:
                     logger.info(f"🎯 Extracted activeAgent from ToolMessage: {activeAgent}")
