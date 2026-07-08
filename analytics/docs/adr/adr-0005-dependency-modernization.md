@@ -57,6 +57,12 @@ The repo URL will be **shared publicly at an event with live demos** and used fo
 7. **Propagate to `01_exercises`** (source + manuals) — including the deferred routing-map manual propagation (bundle here since the graph code is being touched anyway).
 8. **Regenerate the baseline** (ADR-0004) on the upgraded app; run the acceptance scenarios.
 
+### Implementation update — 2026-07-08: `create_react_agent` → `create_agent`
+
+The `create_react_agent` migration surface (step 3) resolved in two stages. First, on the target `langgraph.prebuilt`, `state_modifier=` was renamed to `prompt=` (applied 6×) and `create_react_agent` itself is **deprecated** (moved to `langchain.agents.create_agent`, slated for removal in a future langgraph/langchain "V2"). Rather than ship a deprecated API in a public workshop, we **migrated to `langchain.agents.create_agent`** (adds `langchain==1.3.11` as a top-level dep). Our static prompts (`load_prompt(...)` returns a plain string) map cleanly onto `system_prompt=`, so no middleware rewrite was needed.
+
+**Validated end-to-end on the modernized stack** (data_generator, tenant `p3_createagent`, since cleared): app boots and all 6 agent nodes build; **47 completions with 0 errors**; routing via `transfer_to_*` ToolMessages parses correctly (the langchain-core 1.x list-block `ToolMessage.content` is normalized by `tool_content_text`); and every analytics signal persists — tokens (47/47), `agent_path` incl. multi-hop (`orchestrator,hotel`), `handoff_count`, `previous_agent`, `transfer_success`, and 7 auto-summaries. Commit `02aa476` on `mjbrown/dependency-modernization`.
+
 ## Consequences
 
 - **Positive:** public-ready on current libraries; one upgrade, not two; our instrumentation fixes carry forward; unblocks new modules.
@@ -64,7 +70,7 @@ The repo URL will be **shared publicly at an event with live demos** and used fo
 - **Risks:** `create_react_agent`/mcp-adapters behavioral changes are the most likely to need real fixes; openai v2 edge cases; the frontend is largely independent but should be built.
 
 ## Open items to verify (during implementation)
-- Exact `create_react_agent` signature/prompt API on the target `langgraph.prebuilt`.
+- ~~Exact `create_react_agent` signature/prompt API on the target `langgraph.prebuilt`.~~ **Resolved** — migrated to `langchain.agents.create_agent` (see 2026-07-08 implementation update above).
 - `langchain-mcp-adapters` 0.3.0 client/session API vs the current persistent-session pattern.
 - `openai` 2.x / `langchain-openai` 1.x construction + token-usage behavior (does `usage_metadata` populate without `stream_options`? if so, simplify the token fix).
 - Whether `MessagesState` remains the right state type or a `TypedDict + add_messages` is now idiomatic.
