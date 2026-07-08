@@ -658,6 +658,13 @@ def build_agent_graph():
     # Set entry point - always start with orchestrator
     builder.add_edge(START, "orchestrator")
     
+    # Routing maps. IMPORTANT: get_active_agent can return ANY of the agent names,
+    # "summarizer" (auto-summarization can trigger at any node), or the capitalized
+    # "Orchestrator" default. LangGraph raises KeyError if a returned value is not a
+    # key here, so every map must cover all of them. A specialist is reachable
+    # directly only from the orchestrator (or itself); from any other node a
+    # specialist target is routed via the orchestrator hub.
+
     # Orchestrator routing - can route to any specialized agent
     builder.add_conditional_edges(
         "orchestrator",
@@ -670,6 +677,7 @@ def build_agent_graph():
             "summarizer": "summarizer",
             "human": "human",  # Wait for user input
             "orchestrator": "orchestrator",  # fallback
+            "Orchestrator": "orchestrator",  # capitalized default from get_active_agent
         }
     )
     
@@ -680,7 +688,11 @@ def build_agent_graph():
         {
             "itinerary_generator": "itinerary_generator",
             "orchestrator": "orchestrator",
+            "Orchestrator": "orchestrator",
             "hotel": "hotel",  # Can stay in hotel
+            "summarizer": "summarizer",  # auto-summarization can trigger here
+            "activity": "orchestrator",  # re-route other specialists via the hub
+            "dining": "orchestrator",
         }
     )
     
@@ -691,7 +703,11 @@ def build_agent_graph():
         {
             "itinerary_generator": "itinerary_generator",
             "orchestrator": "orchestrator",
+            "Orchestrator": "orchestrator",
             "activity": "activity",  # Can stay in activity
+            "summarizer": "summarizer",
+            "hotel": "orchestrator",
+            "dining": "orchestrator",
         }
     )
     
@@ -702,7 +718,11 @@ def build_agent_graph():
         {
             "itinerary_generator": "itinerary_generator",
             "orchestrator": "orchestrator",
+            "Orchestrator": "orchestrator",
             "dining": "dining",  # Can stay in dining
+            "summarizer": "summarizer",
+            "hotel": "orchestrator",
+            "activity": "orchestrator",
         }
     )
     
@@ -712,17 +732,27 @@ def build_agent_graph():
         get_active_agent,
         {
             "orchestrator": "orchestrator",
+            "Orchestrator": "orchestrator",
             "itinerary_generator": "itinerary_generator",  # Can stay to handle follow-ups
+            "summarizer": "summarizer",
+            "hotel": "orchestrator",
+            "activity": "orchestrator",
+            "dining": "orchestrator",
         }
     )
     
-    # Summarizer routing - can only return to orchestrator
+    # Summarizer routing - returns to orchestrator (or stays)
     builder.add_conditional_edges(
         "summarizer",
         get_active_agent,
         {
             "orchestrator": "orchestrator",
+            "Orchestrator": "orchestrator",
             "summarizer": "summarizer",  # Can stay in summarizer
+            "hotel": "orchestrator",
+            "activity": "orchestrator",
+            "dining": "orchestrator",
+            "itinerary_generator": "orchestrator",
         }
     )
     
